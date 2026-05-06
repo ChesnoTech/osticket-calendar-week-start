@@ -81,13 +81,18 @@ class CalendarWeekStartPlugin extends Plugin {
      * Read first_day from this plugin's config without instantiating
      * the plugin object via the OO API — required because injectScript runs in
      * a static context where the plugin instance lifecycle is uncertain.
-     * Direct DB query against ost_plugin / ost_plugin_instance / ost_config.
-     * Falls back to default 1 (Monday).
+     *
+     * osTicket PluginInstance::getNamespace() returns
+     *   "plugin.{plugin_id}.instance.{instance_id}"
+     * — see WebRoot/include/class.plugin.php::PluginInstance::getNamespace().
+     *
+     * Falls back to default 1 (Monday) on any error.
      */
     static function readFirstDay() {
         if (!defined('TABLE_PREFIX')) return 1;
         $sql = sprintf(
-            "SELECT pi.id FROM `%splugin` p
+            "SELECT pi.id AS instance_id, p.id AS plugin_id
+             FROM `%splugin` p
              JOIN `%splugin_instance` pi ON pi.plugin_id = p.id
              WHERE p.install_path = 'plugins/calendar-week-start'
                AND (pi.flags & 1) = 1
@@ -99,7 +104,9 @@ class CalendarWeekStartPlugin extends Plugin {
         $row = db_fetch_array($res);
         if (!$row) return 1;
 
-        $namespace = 'plugin.' . (int)$row['id'];
+        $namespace = sprintf('plugin.%d.instance.%d',
+            (int)$row['plugin_id'], (int)$row['instance_id']);
+
         $cfgRes = @db_query(sprintf(
             "SELECT `value` FROM `%sconfig`
              WHERE `namespace` = %s AND `key` = 'first_day' LIMIT 1",
@@ -109,7 +116,19 @@ class CalendarWeekStartPlugin extends Plugin {
         if (!$cfgRes) return 1;
         $cfgRow = db_fetch_array($cfgRes);
         if (!$cfgRow) return 1;
-        $i = (int)$cfgRow['value'];
+
+        // ChoiceField stores values as JSON {key: label} — extract first key.
+        // Fallback to raw scalar interpretation if not JSON.
+        $raw = (string)$cfgRow['value'];
+        $i = -1;
+        if ($raw !== '' && $raw[0] === '{') {
+            $decoded = @json_decode($raw, true);
+            if (is_array($decoded) && count($decoded) >= 1) {
+                $keys = array_keys($decoded);
+                $i = (int)$keys[0];
+            }
+        }
+        if ($i < 0) $i = (int)$raw;
         return ($i >= 0 && $i <= 6) ? $i : 1;
     }
 }

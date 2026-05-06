@@ -53,13 +53,30 @@ class CalendarWeekStartConfig extends PluginConfig {
     }
 
     function pre_save(&$config, &$errors) {
-        $fd = isset($config['first_day']) ? (string)$config['first_day'] : '';
-        if ($fd === '' || !ctype_digit($fd) || (int)$fd < 0 || (int)$fd > 6) {
+        // ChoiceField getClean() returns ['<key>' => '<label>']; raw posts may be scalar
+        $raw = isset($config['first_day']) ? $config['first_day'] : null;
+        $key = null;
+        if (is_array($raw) && count($raw) >= 1) {
+            $keys = array_keys($raw);
+            $key  = (string)$keys[0];
+        } elseif (is_string($raw) || is_numeric($raw)) {
+            // Could be JSON string, plain int, or plain string
+            $s = (string)$raw;
+            if ($s !== '' && $s[0] === '{') {
+                $d = @json_decode($s, true);
+                if (is_array($d) && count($d) >= 1) {
+                    $kk = array_keys($d);
+                    $key = (string)$kk[0];
+                }
+            } else {
+                $key = $s;
+            }
+        }
+        if ($key === null || $key === '' || !ctype_digit($key)
+                || (int)$key < 0 || (int)$key > 6) {
             $errors['first_day'] = __('Invalid day value.');
             return false;
         }
-        // Normalize to canonical string form
-        $config['first_day'] = (string)(int)$fd;
         return true;
     }
 }
