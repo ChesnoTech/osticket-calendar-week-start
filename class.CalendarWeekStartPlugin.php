@@ -206,6 +206,181 @@ class CalendarWeekStartPlugin extends Plugin {
     }
 
     /**
+     * Download latest release zip, backup current files, extract over plugin dir.
+     * Returns {success: bool, version?: string, backup_file?: string, error?: string}.
+     */
+    static function applyUpdate() {
+        $check = self::checkForUpdate();
+        if (!empty($check['error'])) {
+            return array('success' => false, 'error' => $check['error']);
+        }
+        if (empty($check['available'])) {
+            return array('success' => false, 'error' => 'Already up to date.');
+        }
+
+        $local      = (string)$check['current'];
+        $remote     = (string)$check['latest'];
+        $pluginDir  = dirname(__FILE__);
+        $backupsDir = $pluginDir . '/backups';
+
+        if (!is_dir($backupsDir) && !@mkdir($backupsDir, 0755, true)) {
+            return array('success' => false, 'error' => 'Cannot create backups/ directory.');
+        }
+        if (!is_writable($pluginDir)) {
+            return array('success' => false, 'error' => 'Plugin directory not writable.');
+        }
+        if (!class_exists('ZipArchive')) {
+            return array('success' => false, 'error' => 'ZipArchive PHP extension required.');
+        }
+
+        $backupFile = self::backupFiles($pluginDir, $backupsDir, $local, $remote);
+        if (!$backupFile) {
+            return array('success' => false, 'error' => 'Backup creation failed.');
+        }
+
+        $candidates = array();
+        if (!empty($check['asset_url'])) $candidates[] = $check['asset_url'];
+        $candidates[] = 'https://github.com/' . self::GITHUB_REPO
+                      . '/releases/download/v' . $remote
+                      . '/calendar-week-start-v' . $remote . '.zip';
+        $candidates[] = 'https://codeload.github.com/' . self::GITHUB_REPO
+                      . '/zip/refs/heads/' . self::GITHUB_BRANCH;
+        $candidates[] = 'https://github.com/' . self::GITHUB_REPO
+                      . '/archive/refs/heads/' . self::GITHUB_BRANCH . '.zip';
+
+        $zipBody = null;
+        foreach (array_unique($candidates) as $u) {
+            $zipBody = self::httpGet($u);
+            if ($zipBody && strlen($zipBody) > 256) break;
+            $zipBody = null;
+        }
+        if (!$zipBody) {
+            return array('success' => false, 'error' => 'Failed to download update zip.');
+        }
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cws_update_');
+        @file_put_contents($tmpFile, $zipBody);
+
+        $tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cws_update_' . uniqid();
+        @mkdir($tmpDir, 0755, true);
+
+        $zip = new \ZipArchive();
+        if ($zip->open($tmpFile) !== true) {
+            @unlink($tmpFile);
+            self::recursiveDelete($tmpDir);
+            return array('success' => false, 'error' => 'Cannot open downloaded zip.');
+        }
+        $zip->extractTo($tmpDir);
+        $zip->close();
+        @unlink($tmpFile);
+
+        $dirs = glob($tmpDir . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR);
+        $extractedRoot = $dirs ? $dirs[0] : null;
+        if (!$extractedRoot) {
+            self::recursiveDelete($tmpDir);
+            return array('success' => false, 'error' => 'Invalid archive structure.');
+        }
+
+        if (!self::recursiveCopy($extractedRoot, $pluginDir)) {
+            self::recursiveDelete($tmpDir);
+            return array('success' => false, 'error' => 'File copy failed mid-way.');
+        }
+        self::recursiveDelete($tmpDir);
+
+        if (defined('TABLE_PREFIX')) {
+            @db_query(sprintf(
+                "UPDATE `%splugin` SET `version` = %s WHERE `install_path` = 'plugins/calendar-week-start' LIMIT 1",
+                TABLE_PREFIX,
+                db_input($remote)
+            ));
+        }
+
+        if (function_exists('opcache_reset')) @opcache_reset();
+
+        return array(
+            'success'     => true,
+            'version'     => $remote,
+            'backup_file' => basename($backupFile),
+        );
+    }
+
+    /**
+     * Zip the plugin directory (excluding backups/ and graphify-out/) into
+     * backups/v{old}-to-v{new}-{Ymd-His}.zip. Returns absolute path on success,
+     * null on failure.
+     */
+    private static function backupFiles($pluginDir, $backupsDir, $oldVer, $newVer) {
+        if (!class_exists('ZipArchive')) return null;
+        $stamp    = date('Ymd-His');
+        $backFile = $backupsDir . '/v' . $oldVer . '-to-v' . $newVer . '-' . $stamp . '.zip';
+        $zip      = new \ZipArchive();
+        if ($zip->open($backFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return null;
+        }
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($pluginDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+        foreach ($iter as $f) {
+            $abs = $f->getPathname();
+            $rel = ltrim(substr($abs, strlen($pluginDir)), '/\\');
+            if (strpos($rel, 'backups' . DIRECTORY_SEPARATOR) === 0
+                    || strpos($rel, 'backups/') === 0
+                    || strpos($rel, 'graphify-out' . DIRECTORY_SEPARATOR) === 0
+                    || strpos($rel, 'graphify-out/') === 0) {
+                continue;
+            }
+            $zip->addFile($abs, $rel);
+        }
+        $zip->close();
+        return file_exists($backFile) ? $backFile : null;
+    }
+
+    /**
+     * Copy a directory tree onto another. Skips entries with traversal markers.
+     * Does NOT delete files at destination that are absent in source — preserves
+     * backups/ and any local-only files.
+     */
+    private static function recursiveCopy($src, $dst) {
+        if (!is_dir($src)) return false;
+        if (!is_dir($dst) && !@mkdir($dst, 0755, true)) return false;
+
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($iter as $item) {
+            $rel = ltrim(substr($item->getPathname(), strlen($src)), '/\\');
+            if ($rel === '' || strpos($rel, '..') !== false) continue;
+            $relSlash = str_replace(DIRECTORY_SEPARATOR, '/', $rel);
+            if (strpos($relSlash, 'backups/') === 0) continue;
+            $target = $dst . DIRECTORY_SEPARATOR . $rel;
+            if ($item->isDir()) {
+                if (!is_dir($target) && !@mkdir($target, 0755, true)) return false;
+            } else {
+                if (!@copy($item->getPathname(), $target)) return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Recursively delete a directory.
+     */
+    private static function recursiveDelete($dir) {
+        if (!is_dir($dir)) return;
+        $items = @scandir($dir);
+        if ($items === false) return;
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path) && !is_link($path)) self::recursiveDelete($path);
+            else @unlink($path);
+        }
+        @rmdir($dir);
+    }
+
+    /**
      * Read 'version' from this plugin's plugin.php manifest.
      * Returns null if not readable.
      */
