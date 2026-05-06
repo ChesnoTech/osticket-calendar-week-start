@@ -146,6 +146,64 @@ class CalendarWeekStartPlugin extends Plugin {
     }
 
     /**
+     * Look up the latest release on GitHub. Falls back to raw branch plugin.php
+     * if the API is unreachable. Returns shape:
+     *   ['current' => string, 'latest' => string, 'available' => bool,
+     *    'asset_url' => string|null, 'release_url' => string|null,
+     *    'error' => string]  (only one of 'available' or 'error' is meaningful)
+     */
+    static function checkForUpdate() {
+        $local = self::getLocalManifestVersion();
+        if (!$local) {
+            return array('error' => 'Cannot read local plugin.php version.');
+        }
+
+        $remoteVersion = null;
+        $remoteAsset   = null;
+        $releaseUrl    = null;
+
+        $apiUrl = 'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest';
+        $body   = self::httpGet($apiUrl);
+        if ($body) {
+            $j = @json_decode($body, true);
+            if (is_array($j) && !empty($j['tag_name'])) {
+                $remoteVersion = ltrim((string)$j['tag_name'], 'v');
+                if (!empty($j['html_url'])) $releaseUrl = (string)$j['html_url'];
+                if (!empty($j['assets']) && is_array($j['assets'])) {
+                    foreach ($j['assets'] as $a) {
+                        if (!empty($a['browser_download_url'])
+                                && substr($a['browser_download_url'], -4) === '.zip') {
+                            $remoteAsset = (string)$a['browser_download_url'];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$remoteVersion) {
+            $rawUrl = 'https://raw.githubusercontent.com/' . self::GITHUB_REPO
+                    . '/' . self::GITHUB_BRANCH . '/plugin.php';
+            $rawBody = self::httpGet($rawUrl);
+            if ($rawBody && preg_match("/'version'\s*=>\s*'([^']+)'/", $rawBody, $m)) {
+                $remoteVersion = $m[1];
+            }
+        }
+
+        if (!$remoteVersion) {
+            return array('error' => 'Cannot reach GitHub. Check server connectivity.');
+        }
+
+        return array(
+            'current'     => $local,
+            'latest'      => $remoteVersion,
+            'available'   => version_compare($remoteVersion, $local, '>'),
+            'asset_url'   => $remoteAsset,
+            'release_url' => $releaseUrl,
+        );
+    }
+
+    /**
      * Read 'version' from this plugin's plugin.php manifest.
      * Returns null if not readable.
      */
