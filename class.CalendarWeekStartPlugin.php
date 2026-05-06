@@ -50,7 +50,9 @@ class CalendarWeekStartPlugin extends Plugin {
         $dispatcher->append(
             url('^/calendar-week-start/', patterns(
                 $dir . 'class.CalendarWeekStartAjax.php:CalendarWeekStartAjax',
-                url_get('^assets/(?P<file>week-start(-admin)?\.js|.*\.css)$', 'serveAsset')
+                url_get ('^assets/(?P<file>week-start(-admin)?\.(js|css))$', 'serveAsset'),
+                url_get ('^check-update$', 'checkForUpdate'),
+                url_post('^apply-update$', 'applyUpdate')
             ))
         );
     }

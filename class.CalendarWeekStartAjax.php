@@ -51,4 +51,36 @@ class CalendarWeekStartAjax extends AjaxController {
         header('Content-Length: ' . filesize($path));
         readfile($path);
     }
+
+    /**
+     * GET /calendar-week-start/check-update
+     * Returns JSON {current, latest, available, asset_url, release_url, error?}
+     */
+    function checkForUpdate() {
+        global $thisstaff;
+        if (!$thisstaff) {
+            Http::response(403, 'Staff login required');
+            return;
+        }
+        require_once INCLUDE_DIR . 'plugins/calendar-week-start/class.CalendarWeekStartPlugin.php';
+        $result = CalendarWeekStartPlugin::checkForUpdate();
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode($result);
+    }
+
+    /**
+     * POST /calendar-week-start/apply-update
+     * Returns JSON {success, version?, backup_file?, error?}
+     */
+    function applyUpdate() {
+        global $thisstaff;
+        if (!$thisstaff) {
+            Http::response(403, 'Staff login required');
+            return;
+        }
+        require_once INCLUDE_DIR . 'plugins/calendar-week-start/class.CalendarWeekStartPlugin.php';
+        $result = CalendarWeekStartPlugin::applyUpdate();
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode($result);
+    }
 }
