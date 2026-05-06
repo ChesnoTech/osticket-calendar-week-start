@@ -12,7 +12,20 @@ class CalendarWeekStartPlugin extends Plugin {
 
     var $config_class = 'CalendarWeekStartConfig';
 
+    const GITHUB_REPO   = 'ChesnoTech/osticket-calendar-week-start';
+    const GITHUB_BRANCH = 'master';
+    const HTTP_TIMEOUT  = 15;
+    const HTTP_UA       = 'CalendarWeekStart-Updater/1.1.0';
+
     static private $bootstrapped = false;
+
+    /**
+     * Block osTicket's built-in auto-upgrade flow — we manage upgrades via
+     * applyUpdate() so the admin can confirm and back up first.
+     */
+    function pre_upgrade(&$errors) {
+        return false;
+    }
 
     function bootstrap() {
         self::bootstrapStatic($this);
@@ -130,6 +143,52 @@ class CalendarWeekStartPlugin extends Plugin {
         }
         if ($i < 0) $i = (int)$raw;
         return ($i >= 0 && $i <= 6) ? $i : 1;
+    }
+
+    /**
+     * Read 'version' from this plugin's plugin.php manifest.
+     * Returns null if not readable.
+     */
+    private static function getLocalManifestVersion() {
+        $f = dirname(__FILE__) . '/plugin.php';
+        if (!file_exists($f)) return null;
+        $info = @include $f;
+        return is_array($info) && !empty($info['version'])
+            ? (string)$info['version']
+            : null;
+    }
+
+    /**
+     * GET an HTTP(S) URL. curl preferred; file_get_contents fallback.
+     * Returns body string on success, null on failure.
+     */
+    private static function httpGet($url) {
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt_array($ch, array(
+                CURLOPT_URL            => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_TIMEOUT        => self::HTTP_TIMEOUT,
+                CURLOPT_USERAGENT      => self::HTTP_UA,
+                CURLOPT_HTTPHEADER     => array('Accept: application/vnd.github+json'),
+            ));
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body !== false && $code >= 200 && $code < 400) return $body;
+            return null;
+        }
+        $opts = array('http' => array(
+            'method'  => 'GET',
+            'timeout' => self::HTTP_TIMEOUT,
+            'header'  => "User-Agent: " . self::HTTP_UA . "\r\n"
+                       . "Accept: application/vnd.github+json\r\n",
+        ));
+        $body = @file_get_contents($url, false, stream_context_create($opts));
+        return $body !== false ? $body : null;
     }
 }
 
