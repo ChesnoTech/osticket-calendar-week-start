@@ -1,0 +1,52 @@
+/* Calendar Week Start v1.1.0 — admin update panel + spinner styles */
+
+#cws-updates-panel {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+    font-size: 13px;
+    line-height: 1.45;
+}
+#cws-updates-panel.cws-uptodate {
+    border-color: #c8e6c9;
+    background: #f1f8e9;
+}
+#cws-updates-panel.cws-available {
+    border-color: #ffcc80;
+    background: #fff8e1;
+}
+#cws-updates-panel.cws-error {
+    border-color: #ef9a9a;
+    background: #ffebee;
+}
+#cws-updates-panel button,
+#cws-updates-panel a.cws-btn {
+    margin-right: 8px;
+    margin-top: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+#cws-updates-panel a.cws-release-link {
+    color: #128dbe;
+    text-decoration: none;
+}
+#cws-updates-panel a.cws-release-link:hover {
+    text-decoration: underline;
+}
+.cws-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 2px solid #ccc;
+    border-top-color: #128dbe;
+    border-radius: 50%;
+    animation: cws-spin 1s linear infinite;
+}
+@keyframes cws-spin {
+    to { transform: rotate(360deg); }
+}

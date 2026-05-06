@@ -2,6 +2,21 @@
 
 All notable changes to this plugin are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-05-06
+
+### Added
+- One-click auto-update from GitHub Releases. Plugin instance Config tab now
+  shows an Updates panel; banner appears when a newer release tag exists; Apply
+  button downloads the release zip, backs up current files into `backups/`,
+  and overwrites in place.
+- New asset `assets/week-start-admin.css`.
+- New `backups/` directory holds pre-update zip backups (e.g.
+  `v1.0.2-to-v1.1.0-20260506-194530.zip`).
+
+### Notes
+- Updater behaviour mirrors the `quick-buttons` plugin pattern.
+- Backup pruning is manual in this release (see README).
+
 ## [1.0.2] — 2026-05-06
 
 ### Fixed
