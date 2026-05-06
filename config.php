@@ -46,6 +46,10 @@ class CalendarWeekStartConfig extends PluginConfig {
                                . '<div id="cws-preview-wrap">'
                                . '<label>' . __('Live Preview') . '</label>'
                                . '<div id="cws-preview"></div>'
+                               . '</div>'
+                               . '<div id="cws-updates-panel">'
+                               . '<span class="cws-spinner"></span>'
+                               . __('Checking for updates&hellip;')
                                . '</div>',
                 ),
             )),
