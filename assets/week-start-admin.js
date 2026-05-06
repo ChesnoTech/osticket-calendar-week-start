@@ -58,3 +58,110 @@
         }, 100);
     }
 })();
+
+/* ------------------------------------------------------------------ */
+/* Updates panel (v1.1.0)                                             */
+/* ------------------------------------------------------------------ */
+(function(){
+    var BASE = '/scp/ajax.php/calendar-week-start';
+
+    function findCsrf() {
+        var m = document.querySelector('meta[name="csrf_token"]');
+        return m ? m.getAttribute('content') : '';
+    }
+
+    function setStatus($panel, klass, html) {
+        $panel
+            .removeClass('cws-uptodate cws-available cws-error')
+            .addClass(klass)
+            .html(html);
+    }
+
+    function escapeHtml(s) {
+        return jQuery('<i>').text(s == null ? '' : String(s)).html();
+    }
+
+    function initUpdatesPanel() {
+        if (!window.jQuery) return false;
+        var $panel = jQuery('#cws-updates-panel');
+        if (!$panel.length) return false;
+
+        jQuery.ajax({
+            url:      BASE + '/check-update',
+            method:   'GET',
+            dataType: 'json',
+            cache:    false
+        })
+        .done(function(d){
+            if (d && d.error) {
+                setStatus($panel, 'cws-error',
+                    '<strong>Update check failed:</strong> ' + escapeHtml(d.error));
+                return;
+            }
+            if (!d || !d.available) {
+                setStatus($panel, 'cws-uptodate',
+                    '✓ Up to date (v' + escapeHtml(d && d.current) + ')');
+                return;
+            }
+            var html = '<strong>v' + escapeHtml(d.latest)
+                     + '</strong> available (you have v'
+                     + escapeHtml(d.current) + ').'
+                     + '<br>'
+                     + '<button type="button" id="cws-apply-btn" class="green button">Apply update</button>';
+            if (d.release_url) {
+                html += '<a class="cws-release-link" target="_blank" rel="noopener" href="'
+                      + escapeHtml(d.release_url)
+                      + '">View release notes ↗</a>';
+            }
+            setStatus($panel, 'cws-available', html);
+            $panel.find('#cws-apply-btn').on('click', function(){
+                applyUpdate($panel, d.latest);
+            });
+        })
+        .fail(function(xhr){
+            setStatus($panel, 'cws-error',
+                '<strong>Update check failed:</strong> HTTP ' + xhr.status);
+        });
+
+        return true;
+    }
+
+    function applyUpdate($panel, latest) {
+        if (!confirm('Apply v' + latest + '?\n\nFiles will be replaced. A backup will be saved into the plugin\'s backups/ directory before changes are made.')) return;
+        $panel
+            .removeClass('cws-uptodate cws-available cws-error')
+            .html('<span class="cws-spinner"></span>Applying update…');
+
+        jQuery.ajax({
+            url:    BASE + '/apply-update',
+            method: 'POST',
+            headers: { 'X-CSRFToken': findCsrf() },
+            dataType: 'json',
+            cache:    false
+        })
+        .done(function(d){
+            if (d && d.success) {
+                setStatus($panel, 'cws-uptodate',
+                    '✓ Updated to v' + escapeHtml(d.version) + '. '
+                    + 'Backup: <code>' + escapeHtml(d.backup_file) + '</code>. '
+                    + 'Reloading…');
+                setTimeout(function(){ window.location.reload(); }, 2000);
+            } else {
+                setStatus($panel, 'cws-error',
+                    '<strong>Update failed:</strong> '
+                    + escapeHtml((d && d.error) || 'Unknown error'));
+            }
+        })
+        .fail(function(xhr){
+            setStatus($panel, 'cws-error',
+                '<strong>Update failed:</strong> HTTP ' + xhr.status);
+        });
+    }
+
+    if (!initUpdatesPanel()) {
+        var tries = 0;
+        var t = setInterval(function(){
+            if (initUpdatesPanel() || ++tries > 30) clearInterval(t);
+        }, 100);
+    }
+})();

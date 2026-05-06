@@ -80,14 +80,18 @@ class CalendarWeekStartPlugin extends Plugin {
         $dir = dirname(__FILE__) . '/assets/';
         $v   = max(
             @filemtime($dir . 'week-start.js'),
-            @filemtime($dir . 'week-start-admin.js')
+            @filemtime($dir . 'week-start-admin.js'),
+            @filemtime($dir . 'week-start-admin.css')
         );
         if (!$v) $v = time();
 
         $script  = '<script>window.CWS_FIRST_DAY=' . (int)$firstDay . ';</script>';
         $script .= '<script src="' . $base . 'week-start.js?v=' . $v . '"></script>';
-        if ($isAdminPage)
+        if ($isAdminPage) {
+            $script .= '<link rel="stylesheet" type="text/css" href="'
+                     . $base . 'week-start-admin.css?v=' . $v . '">';
             $script .= '<script src="' . $base . 'week-start-admin.js?v=' . $v . '"></script>';
+        }
 
         return str_ireplace('</body>', $script . '</body>', $html);
     }
