@@ -34,9 +34,17 @@ class CalendarWeekStartConfig extends PluginConfig {
             )),
             'preview_anchor' => new FreeTextField(array(
                 'configuration' => array(
-                    'content' => '<div id="cws-preview-wrap" style="margin-top:10px;">'
-                               . '<label style="display:block;font-weight:600;margin-bottom:4px;">'
-                               . __('Live Preview') . '</label>'
+                    'content' => '<style>'
+                               . '#cws-preview-wrap{margin-top:10px;}'
+                               . '#cws-preview-wrap label{display:block;font-weight:600;margin-bottom:4px;}'
+                               . '#cws-preview{display:inline-block;}'
+                               . '#cws-preview .ui-datepicker{width:auto;min-width:18em;}'
+                               . '#cws-preview .ui-datepicker-inline{width:auto;}'
+                               . '#cws-preview table{width:auto;}'
+                               . '#cws-preview td,#cws-preview th{padding:.2em .35em;}'
+                               . '</style>'
+                               . '<div id="cws-preview-wrap">'
+                               . '<label>' . __('Live Preview') . '</label>'
                                . '<div id="cws-preview"></div>'
                                . '</div>',
                 ),
