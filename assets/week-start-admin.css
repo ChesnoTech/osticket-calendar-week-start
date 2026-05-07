@@ -1,41 +1,6 @@
-/* Calendar Week Start v1.1.0 — admin update panel + spinner styles */
+/* Calendar Week Start v1.1.1 — admin live-preview + Updates tab styles */
 
-#cws-updates-panel {
-    margin-top: 16px;
-    padding: 12px 14px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-    font-size: 13px;
-    line-height: 1.45;
-}
-#cws-updates-panel.cws-uptodate {
-    border-color: #c8e6c9;
-    background: #f1f8e9;
-}
-#cws-updates-panel.cws-available {
-    border-color: #ffcc80;
-    background: #fff8e1;
-}
-#cws-updates-panel.cws-error {
-    border-color: #ef9a9a;
-    background: #ffebee;
-}
-#cws-updates-panel button,
-#cws-updates-panel a.cws-btn {
-    margin-right: 8px;
-    margin-top: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-    cursor: pointer;
-}
-#cws-updates-panel a.cws-release-link {
-    color: #128dbe;
-    text-decoration: none;
-}
-#cws-updates-panel a.cws-release-link:hover {
-    text-decoration: underline;
-}
+/* spinner used in Config tab + Updates tab */
 .cws-spinner {
     display: inline-block;
     width: 14px;
@@ -50,3 +15,105 @@
 @keyframes cws-spin {
     to { transform: rotate(360deg); }
 }
+
+/* ----- Updates tab ----- */
+.cws-updates-tab {
+    background: #fff;
+}
+.cws-update-card {
+    max-width: 640px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+    overflow: hidden;
+}
+.cws-update-card.cws-uptodate { border-color: #c8e6c9; }
+.cws-update-card.cws-available { border-color: #ffcc80; }
+.cws-update-card.cws-error    { border-color: #ef9a9a; }
+
+.cws-update-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f4f6f8;
+    border-bottom: 1px solid #e1e4e8;
+}
+.cws-update-card.cws-uptodate .cws-update-header { background: #f1f8e9; }
+.cws-update-card.cws-available .cws-update-header { background: #fff8e1; }
+.cws-update-card.cws-error    .cws-update-header { background: #ffebee; }
+
+.cws-update-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.cws-update-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.cws-update-body {
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+}
+.cws-update-card.cws-uptodate .cws-update-body { color: #2e7d32; }
+.cws-update-card.cws-error .cws-update-body { color: #c62828; }
+
+.cws-update-body p { margin: 0 0 10px; }
+.cws-update-body p:last-child { margin-bottom: 0; }
+
+.cws-update-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.cws-update-btn,
+.cws-recheck-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #128dbe;
+    color: #fff;
+}
+.cws-update-btn:hover,
+.cws-recheck-btn:hover {
+    background: #0e7aa3;
+}
+.cws-update-btn.cws-apply {
+    background: #2e7d32;
+}
+.cws-update-btn.cws-apply:hover {
+    background: #256328;
+}
+.cws-release-link {
+    color: #128dbe;
+    text-decoration: none;
+    font-size: 13px;
+}
+.cws-release-link:hover { text-decoration: underline; }
+
+/* ----- Live preview (instance Config form) ----- */
+#cws-preview-wrap {
+    margin-top: 10px;
+}
+#cws-preview-wrap label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+#cws-preview {
+    display: inline-block;
+}
+#cws-preview .ui-datepicker { width: auto; min-width: 18em; }
+#cws-preview .ui-datepicker-inline { width: auto; }
+#cws-preview table { width: auto; }
+#cws-preview td,
+#cws-preview th { padding: .2em .35em; }

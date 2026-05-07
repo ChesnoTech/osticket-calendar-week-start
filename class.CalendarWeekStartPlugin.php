@@ -74,8 +74,11 @@ class CalendarWeekStartPlugin extends Plugin {
         $isStaff = (stripos($reqUri, '/scp/') !== false);
         $base    = ROOT_PATH . ($isStaff ? 'scp/ajax.php/' : 'ajax.php/') . 'calendar-week-start/assets/';
 
-        // Admin config page detection (staff plugins.php)
-        $isAdminPage = $isStaff && (stripos($reqUri, 'plugins.php') !== false);
+        // v1.1.1 — gate admin asset injection on this plugin's own detail page only.
+        // Avoids contaminating other plugins' admin pages.
+        $urlPluginId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $isAdminPage = $isStaff
+                    && self::shouldInjectAdminAssets($reqUri, $urlPluginId, self::getCwsPluginId());
 
         $dir = dirname(__FILE__) . '/assets/';
         $v   = max(
@@ -94,6 +97,37 @@ class CalendarWeekStartPlugin extends Plugin {
         }
 
         return str_ireplace('</body>', $script . '</body>', $html);
+    }
+
+    /**
+     * Pure gate: should this plugin's admin assets (admin-css/admin-js) be
+     * injected for this request?
+     *
+     * Yes only when:
+     *   - request URI is a staff plugins.php page
+     *   - URL has explicit ?id=<N>
+     *   - N matches this plugin's own id
+     */
+    public static function shouldInjectAdminAssets($requestUri, $urlPluginId, $cwsPluginId) {
+        if ($requestUri === null || strpos($requestUri, 'plugins.php') === false) return false;
+        if (!$cwsPluginId) return false;
+        return ((int)$urlPluginId === (int)$cwsPluginId);
+    }
+
+    /**
+     * Look up the ost_plugin row id for this plugin (cached statically).
+     */
+    private static $cwsPluginIdCache = null;
+    public static function getCwsPluginId() {
+        if (self::$cwsPluginIdCache !== null) return self::$cwsPluginIdCache;
+        if (!defined('TABLE_PREFIX')) return self::$cwsPluginIdCache = 0;
+        $res = @db_query(sprintf(
+            "SELECT id FROM `%splugin` WHERE install_path = 'plugins/calendar-week-start' LIMIT 1",
+            TABLE_PREFIX
+        ));
+        if (!$res) return self::$cwsPluginIdCache = 0;
+        $row = db_fetch_array($res);
+        return self::$cwsPluginIdCache = ($row ? (int)$row['id'] : 0);
     }
 
     /**

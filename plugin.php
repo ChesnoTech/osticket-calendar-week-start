@@ -1,7 +1,7 @@
 <?php
 return array(
     'id'          => 'osticket:calendar-week-start',
-    'version'     => '1.1.0',
+    'version'     => '1.1.1',
     'name'        => 'Calendar Week Start',
     'author'      => 'ChesnoTech',
     'description' => 'Customize first day of week (Sunday/Monday/Saturday/etc.) across all jQuery UI date pickers in staff panel and client portal. Single global setting. Auto-updates from GitHub.',

@@ -2,6 +2,20 @@
 
 All notable changes to this plugin are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-05-07
+
+### Changed
+- Updates UI moved out of the Config tab into a dedicated top-level **Updates**
+  tab on the plugin admin page (mirrors the `quick-buttons` plugin layout).
+  Click is on demand — banner doesn't fire on every Config tab open.
+- Admin assets (`week-start-admin.js` + `.css`) now scoped to this plugin's
+  detail page only via `shouldInjectAdminAssets()` gate. Avoids contaminating
+  other plugins' admin pages.
+
+### Fixed
+- Live-preview datepicker now defined in admin CSS (was inline `<style>` in
+  FreeTextField anchor — duplicated work and harder to maintain).
+
 ## [1.1.0] — 2026-05-06
 
 ### Added
