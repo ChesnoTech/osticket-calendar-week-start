@@ -2,6 +2,22 @@
 
 All notable changes to this plugin are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] — 2026-05-07
+
+### Fixed
+- **Updates tab no longer glitches in/out.** Init now anchors to the `#instances`
+  link's parent `<ul>` rather than the fragile `#plugin-tabs` / `ul.tabs` selectors,
+  which sometimes matched the main staff navigation list and lost the tab.
+- Tab is also re-injected after PJAX page swaps (`pjax:end`) so the Updates tab
+  remains visible when osTicket navigates between plugin admin pages without a
+  full reload.
+- Idempotent guard: never appends the tab twice if init fires multiple times.
+
+### Notes
+- Pair this release with a properly-named release asset
+  `calendar-week-start-v1.1.3.zip` so the apply-update flow can fetch the
+  release zip directly (fallbacks remain `codeload.github.com` branch zip).
+
 ## [1.1.2] — 2026-05-07
 
 ### Notes

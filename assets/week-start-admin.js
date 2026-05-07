@@ -183,37 +183,39 @@
         if (!window.jQuery) return false;
         var $ = jQuery;
 
-        // Guards: must be on plugin-detail page (not instance edit)
-        // - Plugin-detail page has a link to '#instances' tab
-        // - Instance-edit page does NOT — it shows our '#cws-preview' div instead
-        var isPluginPage = $('a[href="#instances"]').length > 0;
-        var isInstancePage = $('#cws-preview').length > 0;
-        if (!isPluginPage || isInstancePage) return false;
-        if ($('.cws-updates-tab').length) return true; // already injected
+        // Idempotent — never inject twice
+        if ($('a[href="#cws-updates"]').length) return true;
 
-        // Locate the tab list — osTicket renders it in different containers
-        // depending on theme. Try common selectors.
-        var $tabList = $('#plugin-tabs');
-        if (!$tabList.length) $tabList = $('ul.tabs').first();
-        if (!$tabList.length) $tabList = $('.tab_nav ul').first();
+        // Instance-edit page renders #cws-preview from FreeTextField anchor.
+        // Skip there — Updates tab only belongs on the plugin-detail page.
+        if ($('#cws-preview').length) return false;
+
+        // Anchor to the #instances link's <ul> parent — that is the
+        // *plugin* tab list, not the main staff nav. Avoids selector
+        // collisions when osTicketAwesome theme renders multiple <ul.tabs>.
+        var $instancesLink = $('a[href="#instances"]').first();
+        if (!$instancesLink.length) return false;
+        var $tabList = $instancesLink.closest('ul');
         if (!$tabList.length) return false;
 
-        $tabList.append('<li><a href="#cws-updates">Updates</a></li>');
+        // Sibling tab content container — same parent as #instances pane
+        var $instancesPane = $('#instances').first();
+        if (!$instancesPane.length) return false;
+        var $paneParent = $instancesPane.parent();
 
+        // Inject tab + pane
+        $tabList.append('<li class="cws-updates-tab-li"><a href="#cws-updates">Updates</a></li>');
         var $container = $(
             '<div id="cws-updates" class="tab_content cws-updates-tab" ' +
             'style="display:none;padding:15px;"></div>'
         );
-
-        var $tabContainer = $('#plugin-tabs_container');
-        if ($tabContainer.length) $tabContainer.append($container);
-        else $tabList.after($container);
+        $paneParent.append($container);
 
         $tabList.on('click', 'a[href="#cws-updates"]', function(e){
             e.preventDefault();
             $tabList.find('li').removeClass('active');
             $(this).parent().addClass('active');
-            $container.siblings('.tab_content').hide();
+            $paneParent.find('.tab_content').hide();
             $container.show();
             renderCard($container);
         });
@@ -221,10 +223,21 @@
         return true;
     }
 
-    if (!initUpdatesTab()) {
+    function bootstrap() {
+        if (initUpdatesTab()) return;
         var tries = 0;
         var t = setInterval(function(){
             if (initUpdatesTab() || ++tries > 30) clearInterval(t);
         }, 100);
+    }
+
+    // First boot
+    bootstrap();
+
+    // Re-bootstrap after PJAX swaps (osTicket admin uses PJAX for nav).
+    if (window.jQuery) {
+        jQuery(document).on('pjax:end ready', bootstrap);
+    } else {
+        document.addEventListener('DOMContentLoaded', bootstrap);
     }
 })();
